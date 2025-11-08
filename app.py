@@ -142,8 +142,3 @@ def webhook():
 @app.route("/")
 def index():
     return "Greek bot is running!"
-
-@app.route("/")
-def index():
-    return "Greek bot is running!"
-
