@@ -1,19 +1,15 @@
 import os
 import random
 import asyncio
+import threading
 from flask import Flask, request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# --- Настройки ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 app = Flask(__name__)
 
-# --- Создаём глобальный event loop ---
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-
-# --- Алфавит ---
+# --- Греческий алфавит ---
 GREEK_ALPHABET = [
     ("Α α", "άλφα", "alfa", "A"),
     ("Β β", "βήτα", "víta", "B"),
@@ -64,11 +60,15 @@ application.add_handler(CommandHandler("next", next_letter))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
 # --- Инициализация приложения ---
-async def init_telegram_app():
+async def init_app():
     if not application.running:
         await application.initialize()
         await application.start()
-        print("✅ Telegram Application initialized")
+        print("✅ Telegram bot initialized")
+
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+loop.run_until_complete(init_app())
 
 # --- Webhook ---
 @app.route(f"/{TOKEN}", methods=["POST"])
@@ -76,19 +76,20 @@ def webhook():
     data = request.get_json(force=True)
     print("📬 Update from Telegram:", data)
     update = Update.de_json(data, application.bot)
-
-    async def process():
-        await init_telegram_app()
-        await application.process_update(update)
-
-    # Используем глобальный loop
-    loop.create_task(process())
+    asyncio.run_coroutine_threadsafe(application.process_update(update), loop)
     return "ok"
 
 @app.route("/")
 def index():
     return "Greek bot is running!"
 
+# --- Запуск Flask с фоновым loop ---
+def run_loop():
+    print("⚙️ Telegram async loop running...")
+    loop.run_forever()
+
+threading.Thread(target=run_loop, daemon=True).start()
+
 if __name__ == "__main__":
-    print("🚀 Starting Flask app...")
+    print("🚀 Flask server starting...")
     app.run(host="0.0.0.0", port=8080)
