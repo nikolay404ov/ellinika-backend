@@ -107,20 +107,22 @@ def ensure_loop_running():
 # ====== WEBHOOK ======
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    # запускаем loop при первом запросе (внутри воркера gunicorn)
     ensure_loop_running()
 
     data = request.get_json(force=True)
     print("📬 Update from Telegram:", data)
-
     update = Update.de_json(data, application.bot)
 
-    future = asyncio.run_coroutine_threadsafe(
-        application.process_update(update),
-        loop,
-    )
+    async def handle():
+        # гарантируем, что бот инициализирован
+        if not application.initialized:
+            await application.initialize()
+            await application.start()
+            print("✅ Telegram bot initialized (from handle)")
+        await application.process_update(update)
 
-    # логируем возможные ошибки из хэндлеров
+    future = asyncio.run_coroutine_threadsafe(handle(), loop)
+
     def _done(f: asyncio.Future):
         exc = f.exception()
         if exc:
