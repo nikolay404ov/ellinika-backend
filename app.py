@@ -1,18 +1,25 @@
 import os
 import random
+import asyncio
+import threading
+
 from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
+from telegram import Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
+if not TOKEN:
+    raise RuntimeError("TELEGRAM_TOKEN is not set")
 
 app = Flask(__name__)
-bot = Bot(token=TOKEN)
 
-# Dispatcher без очереди, всё синхронно
-dispatcher = Dispatcher(bot=bot, update_queue=None, workers=0, use_context=True)
-
-# --- Данные алфавита ---
+# ---------- Данные ----------
 GREEK_ALPHABET = [
     ("Α α", "άλφα", "alfa", "A"),
     ("Β β", "βήτα", "víta", "B"),
@@ -40,41 +47,63 @@ GREEK_ALPHABET = [
     ("Ω ω", "ωμέγα", "oméga", "Ō"),
 ]
 
-# --- Хэндлеры ---
-def start(update, context):
-    update.message.reply_text(
+# ---------- Хэндлеры ----------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
         "Привет! 🇬🇷 Я помогу тебе выучить греческий алфавит.\n"
         "Напиши /next чтобы получить новую букву!"
     )
 
-def next_letter(update, context):
+async def next_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     greek, name, latin, example = random.choice(GREEK_ALPHABET)
-    update.message.reply_text(
+    await update.message.reply_text(
         f"🔤 {greek}\n"
         f"📖 Название: {name}\n"
         f"💬 Произношение: {latin}\n"
         f"🔠 Пример: {example}"
     )
 
-def echo(update, context):
-    update.message.reply_text("Напиши /next чтобы получить букву 🇬🇷")
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Напиши /next чтобы получить букву 🇬🇷")
 
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(CommandHandler("next", next_letter))
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+# ---------- Application ----------
+application = Application.builder().token(TOKEN).build()
+application.add_handler(CommandHandler("start", start))
+application.add_handler(CommandHandler("next", next_letter))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-# --- Webhook endpoint ---
+# ---------- Async loop в отдельном потоке ----------
+
+loop = asyncio.new_event_loop()
+
+async def init_bot():
+    # Инициализация и старт один раз
+    await application.initialize()
+    await application.start()
+    print("✅ Telegram bot initialized")
+    # Ждём вечно, чтобы loop не завершился
+    await asyncio.Event().wait()
+
+def run_loop():
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(init_bot())
+
+# Стартуем event loop при импортe модуля (когда gunicorn поднимает app:app)
+threading.Thread(target=run_loop, daemon=True).start()
+
+# ---------- Flask Webhook ----------
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     data = request.get_json(force=True)
-    update = Update.de_json(data, bot)
-    dispatcher.process_update(update)
+    print("📬 Update from Telegram:", data)
+
+    update = Update.de_json(data, application.bot)
+
+    # Кидаем обработку апдейта в уже работающий event loop
+    asyncio.run_coroutine_threadsafe(application.process_update(update), loop)
+
     return "ok"
 
 @app.route("/")
 def index():
     return "Greek bot is running!"
-
-if __name__ == "__main__":
-    # локальный запуск, Render всё равно использует gunicorn
-    app.run(host="0.0.0.0", port=8080)
