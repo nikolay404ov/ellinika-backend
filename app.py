@@ -4,9 +4,11 @@ from flask import Flask, request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
+# --- Настройки ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 app = Flask(__name__)
 
+# --- Алфавит ---
 GREEK_ALPHABET = [
     ("Α α", "άλφα", "alfa", "A"),
     ("Β β", "βήτα", "víta", "B"),
@@ -34,6 +36,7 @@ GREEK_ALPHABET = [
     ("Ω ω", "ωμέγα", "oméga", "Ō"),
 ]
 
+# --- Обработчики ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Привет! 🇬🇷 Я помогу тебе выучить греческий алфавит.\n"
@@ -49,17 +52,20 @@ async def next_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Напиши /next чтобы получить букву 🇬🇷")
 
+# --- Application (без polling) ---
 application = Application.builder().token(TOKEN).build()
 application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("next", next_letter))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
+# --- Flask webhook ---
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     data = request.get_json(force=True)
-    print("📬 Update from Telegram:", data)
+    print("📬 Получен апдейт:", data)
     update = Update.de_json(data, application.bot)
-    application.create_task(application.process_update(update))
+    # 👇 Синхронная обработка апдейта
+    application.run_async(application.process_update(update))
     return "ok"
 
 @app.route("/")
