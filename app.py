@@ -1,15 +1,12 @@
 import os
-import os
 import random
 from flask import Flask, request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# --- Настройки ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 app = Flask(__name__)
 
-# --- Данные ---
 GREEK_ALPHABET = [
     ("Α α", "άλφα", "alfa", "A"),
     ("Β β", "βήτα", "víta", "B"),
@@ -37,7 +34,6 @@ GREEK_ALPHABET = [
     ("Ω ω", "ωμέγα", "oméga", "Ō"),
 ]
 
-# --- Хэндлеры ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Привет! 🇬🇷 Я помогу тебе выучить греческий алфавит.\n"
@@ -53,19 +49,17 @@ async def next_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Напиши /next чтобы получить букву 🇬🇷")
 
-# --- Создаём Application ---
 application = Application.builder().token(TOKEN).build()
 application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("next", next_letter))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-# --- Flask webhook ---
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     data = request.get_json(force=True)
-    print("📩 Update from Telegram:", data)  # <-- добавляем лог
+    print("📬 Update from Telegram:", data)
     update = Update.de_json(data, application.bot)
-    application.update_queue.put_nowait(update)
+    application.create_task(application.process_update(update))
     return "ok"
 
 @app.route("/")
