@@ -36,7 +36,7 @@ GREEK_ALPHABET = [
     ("Μ μ", "μυ", "mi", "M"),
     ("Ν ν", "νυ", "ni", "N"),
     ("Ξ ξ", "ξι", "xi", "X"),
-    ("Ο ο", "όμικрон", "ómikron", "O"),
+    ("Ο ο", "όμικρον", "ómikron", "O"),
     ("Π π", "πι", "pi", "P"),
     ("Ρ ρ", "ρο", "ro", "R"),
     ("Σ σ/ς", "σίγμα", "sígma", "S"),
@@ -76,15 +76,22 @@ application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("next", next_letter))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-# ====== LOOP MANAGEMENT ======
+# ====== LOOP & BOT STATE ======
 loop = None
 loop_started = False
 loop_lock = threading.Lock()
+bot_ready_event = None  # asyncio.Event внутри loop-а
 
 async def bot_main():
+    global bot_ready_event
+    bot_ready_event = asyncio.Event()
+
     await application.initialize()
     await application.start()
     print("✅ Telegram bot initialized")
+
+    bot_ready_event.set()  # сигнал, что можно обрабатывать апдейты
+
     # держим loop живым
     await asyncio.Event().wait()
 
@@ -93,8 +100,8 @@ def ensure_loop_running():
     with loop_lock:
         if loop_started:
             return
-        loop_started = True
 
+        loop_started = True
         loop = asyncio.new_event_loop()
 
         def runner():
@@ -111,17 +118,17 @@ def webhook():
 
     data = request.get_json(force=True)
     print("📬 Update from Telegram:", data)
+
     update = Update.de_json(data, application.bot)
 
-    async def handle():
-        # гарантируем, что бот инициализирован
-        if not application.initialized:
-            await application.initialize()
-            await application.start()
-            print("✅ Telegram bot initialized (from handle)")
-        await application.process_update(update)
+    # ждём, пока bot_main завершит initialize/start (очень быстро)
+    if bot_ready_event is not None:
+        asyncio.run_coroutine_threadsafe(bot_ready_event.wait(), loop).result()
 
-    future = asyncio.run_coroutine_threadsafe(handle(), loop)
+    future = asyncio.run_coroutine_threadsafe(
+        application.process_update(update),
+        loop,
+    )
 
     def _done(f: asyncio.Future):
         exc = f.exception()
@@ -131,6 +138,10 @@ def webhook():
     future.add_done_callback(_done)
 
     return "ok"
+
+@app.route("/")
+def index():
+    return "Greek bot is running!"
 
 @app.route("/")
 def index():
