@@ -62,8 +62,9 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 # --- Flask webhook ---
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    json_update = request.get_json(force=True)
-    update = Update.de_json(json_update, application.bot)
+    data = request.get_json(force=True)
+    print("📩 Update from Telegram:", data)  # <-- добавляем лог
+    update = Update.de_json(data, application.bot)
     application.update_queue.put_nowait(update)
     return "ok"
 
