@@ -9,6 +9,10 @@ from telegram.ext import Application, CommandHandler, MessageHandler, ContextTyp
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 app = Flask(__name__)
 
+# --- Создаём глобальный event loop ---
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
 # --- Алфавит ---
 GREEK_ALPHABET = [
     ("Α α", "άλφα", "alfa", "A"),
@@ -59,14 +63,14 @@ application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("next", next_letter))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-# --- Инициализация приложения один раз ---
+# --- Инициализация приложения ---
 async def init_telegram_app():
     if not application.running:
         await application.initialize()
         await application.start()
         print("✅ Telegram Application initialized")
 
-# --- Webhook route ---
+# --- Webhook ---
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     data = request.get_json(force=True)
@@ -77,7 +81,8 @@ def webhook():
         await init_telegram_app()
         await application.process_update(update)
 
-    asyncio.run(process())
+    # Используем глобальный loop
+    loop.create_task(process())
     return "ok"
 
 @app.route("/")
@@ -85,4 +90,5 @@ def index():
     return "Greek bot is running!"
 
 if __name__ == "__main__":
+    print("🚀 Starting Flask app...")
     app.run(host="0.0.0.0", port=8080)
