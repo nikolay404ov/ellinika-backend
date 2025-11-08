@@ -1,14 +1,14 @@
 import os
 import random
+import asyncio
 from flask import Flask, request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# --- Настройки ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 app = Flask(__name__)
 
-# --- Алфавит ---
+# --- Греческий алфавит ---
 GREEK_ALPHABET = [
     ("Α α", "άλφα", "alfa", "A"),
     ("Β β", "βήτα", "víta", "B"),
@@ -52,20 +52,20 @@ async def next_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Напиши /next чтобы получить букву 🇬🇷")
 
-# --- Application (без polling) ---
+# --- Приложение Telegram ---
 application = Application.builder().token(TOKEN).build()
 application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("next", next_letter))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-# --- Flask webhook ---
+# --- Webhook ---
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     data = request.get_json(force=True)
-    print("📬 Получен апдейт:", data)
+    print("📬 Update from Telegram:", data)
     update = Update.de_json(data, application.bot)
-    # 👇 Синхронная обработка апдейта
-    application.run_async(application.process_update(update))
+    # Запускаем обработку апдейта в асинхронном режиме
+    asyncio.run(application.process_update(update))
     return "ok"
 
 @app.route("/")
