@@ -76,34 +76,49 @@ application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("next", next_letter))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-# ====== ASYNC LOOP (один на всё приложение) ======
-loop = asyncio.new_event_loop()
+# ====== LOOP MANAGEMENT ======
+loop = None
+loop_started = False
+loop_lock = threading.Lock()
 
-async def init_bot():
+async def bot_main():
     await application.initialize()
     await application.start()
     print("✅ Telegram bot initialized")
     # держим loop живым
     await asyncio.Event().wait()
 
-def run_loop():
-    asyncio.set_event_loop(loop)
-    print("⚙️ Telegram async loop running...")
-    loop.run_until_complete(init_bot())
+def ensure_loop_running():
+    global loop, loop_started
+    with loop_lock:
+        if loop_started:
+            return
+        loop_started = True
 
-# стартуем loop в фоне при импорте (один worker в gunicorn!)
-threading.Thread(target=run_loop, daemon=True).start()
+        loop = asyncio.new_event_loop()
+
+        def runner():
+            asyncio.set_event_loop(loop)
+            print("⚙️ Telegram async loop running...")
+            loop.run_until_complete(bot_main())
+
+        threading.Thread(target=runner, daemon=True).start()
 
 # ====== WEBHOOK ======
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
+    # запускаем loop при первом запросе (внутри воркера gunicorn)
+    ensure_loop_running()
+
     data = request.get_json(force=True)
     print("📬 Update from Telegram:", data)
 
     update = Update.de_json(data, application.bot)
 
-    # планируем обработку в нашем loop
-    future = asyncio.run_coroutine_threadsafe(application.process_update(update), loop)
+    future = asyncio.run_coroutine_threadsafe(
+        application.process_update(update),
+        loop,
+    )
 
     # логируем возможные ошибки из хэндлеров
     def _done(f: asyncio.Future):
@@ -118,3 +133,4 @@ def webhook():
 @app.route("/")
 def index():
     return "Greek bot is running!"
+
