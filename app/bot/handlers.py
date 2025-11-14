@@ -8,10 +8,20 @@ from telegram.ext import ContextTypes
 from app.bot.data import GREEK_ALPHABET
 
 
-def get_next_letter_keyboard():
-    """Create inline keyboard with 'Next letter' button."""
+def get_main_menu_keyboard():
+    """Create main menu keyboard."""
     keyboard = [
-        [InlineKeyboardButton("🔤 Следующая буква", callback_data="next_letter")]
+        [InlineKeyboardButton("🔤 Следующая буква", callback_data="next_letter")],
+        [InlineKeyboardButton("🏠 В начало", callback_data="main_menu")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_next_letter_keyboard():
+    """Create inline keyboard with 'Next letter' button and menu."""
+    keyboard = [
+        [InlineKeyboardButton("🔤 Следующая буква", callback_data="next_letter")],
+        [InlineKeyboardButton("🏠 В начало", callback_data="main_menu")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -45,14 +55,32 @@ async def send_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show main menu."""
+    text = (
+        "Привет! 🇬🇷 Я помогу тебе выучить греческий алфавит.\n"
+        "Нажми кнопку ниже, чтобы получить букву!"
+    )
+    
+    if update.callback_query:
+        # Button press - edit existing message
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(
+            text=text,
+            reply_markup=get_main_menu_keyboard()
+        )
+    else:
+        # Command or message - send new message
+        await update.message.reply_text(
+            text=text,
+            reply_markup=get_main_menu_keyboard()
+        )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command."""
     print("▶️ /start from", update.effective_user.id)
-    await update.message.reply_text(
-        "Привет! 🇬🇷 Я помогу тебе выучить греческий алфавит.\n"
-        "Нажми кнопку ниже, чтобы получить букву!",
-        reply_markup=get_next_letter_keyboard()
-    )
+    await show_main_menu(update, context)
 
 
 async def next_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -66,6 +94,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "next_letter":
         await send_letter(update, context)
+    elif query.data == "main_menu":
+        await show_main_menu(update, context)
     else:
         await query.answer("Неизвестная команда")
 
@@ -75,6 +105,6 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("💬 text from", update.effective_user.id, ":", update.message.text)
     await update.message.reply_text(
         "Нажми кнопку ниже, чтобы получить букву 🇬🇷",
-        reply_markup=get_next_letter_keyboard()
+        reply_markup=get_main_menu_keyboard()
     )
 
