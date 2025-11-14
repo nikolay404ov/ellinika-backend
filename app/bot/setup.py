@@ -3,9 +3,9 @@
 import asyncio
 import threading
 
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
-from app.bot.handlers import start, next_letter, echo
+from app.bot.handlers import start, next_letter, echo, button_callback
 from app.config import Config
 
 
@@ -21,6 +21,7 @@ def create_bot_application():
     application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("next", next_letter))
+    application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
     return application
 
