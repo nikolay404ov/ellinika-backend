@@ -14,3 +14,8 @@ def create_app():
     
     return app
 
+
+# Create app instance for gunicorn
+Config.validate()
+app = create_app()
+
