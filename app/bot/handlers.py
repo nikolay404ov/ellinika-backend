@@ -16,7 +16,7 @@ def get_reply_keyboard():
     return ReplyKeyboardMarkup(
         keyboard,
         resize_keyboard=True,
-        persistent=True,
+        is_persistent=True,
         input_field_placeholder="Выберите действие..."
     )
 
