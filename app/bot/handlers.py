@@ -2,32 +2,27 @@
 
 import random
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
 
 from app.bot.data import GREEK_ALPHABET
 
 
-def get_main_menu_keyboard():
-    """Create main menu keyboard."""
+def get_reply_keyboard():
+    """Create reply keyboard that stays at the bottom of the chat."""
     keyboard = [
-        [InlineKeyboardButton("🔤 Следующая буква", callback_data="next_letter")],
-        [InlineKeyboardButton("🏠 В начало", callback_data="main_menu")]
+        [KeyboardButton("🔤 Следующая буква"), KeyboardButton("🏠 В начало")]
     ]
-    return InlineKeyboardMarkup(keyboard)
-
-
-def get_next_letter_keyboard():
-    """Create inline keyboard with 'Next letter' button and menu."""
-    keyboard = [
-        [InlineKeyboardButton("🔤 Следующая буква", callback_data="next_letter")],
-        [InlineKeyboardButton("🏠 В начало", callback_data="main_menu")]
-    ]
-    return InlineKeyboardMarkup(keyboard)
+    return ReplyKeyboardMarkup(
+        keyboard,
+        resize_keyboard=True,
+        persistent=True,
+        input_field_placeholder="Выберите действие..."
+    )
 
 
 async def send_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send a random Greek letter (used by both command and button handler)."""
+    """Send a random Greek letter."""
     greek, name, latin, example = random.choice(GREEK_ALPHABET)
     user_id = update.effective_user.id
     print("▶️ Letter sent to", user_id, "->", greek)
@@ -39,20 +34,10 @@ async def send_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔠 Пример: {example}"
     )
     
-    # Check if it's a callback query (button press) or message
-    if update.callback_query:
-        # Button press - edit existing message
-        await update.callback_query.answer()
-        await update.callback_query.edit_message_text(
-            text=text,
-            reply_markup=get_next_letter_keyboard()
-        )
-    else:
-        # Command or message - send new message
-        await update.message.reply_text(
-            text=text,
-            reply_markup=get_next_letter_keyboard()
-        )
+    await update.message.reply_text(
+        text=text,
+        reply_markup=get_reply_keyboard()
+    )
 
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -62,19 +47,10 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Нажми кнопку ниже, чтобы получить букву!"
     )
     
-    if update.callback_query:
-        # Button press - edit existing message
-        await update.callback_query.answer()
-        await update.callback_query.edit_message_text(
-            text=text,
-            reply_markup=get_main_menu_keyboard()
-        )
-    else:
-        # Command or message - send new message
-        await update.message.reply_text(
-            text=text,
-            reply_markup=get_main_menu_keyboard()
-        )
+    await update.message.reply_text(
+        text=text,
+        reply_markup=get_reply_keyboard()
+    )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -88,23 +64,20 @@ async def next_letter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_letter(update, context)
 
 
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle button callback queries."""
-    query = update.callback_query
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text messages and button presses."""
+    text = update.message.text
+    user_id = update.effective_user.id
+    print("💬 text from", user_id, ":", text)
     
-    if query.data == "next_letter":
+    if text == "🔤 Следующая буква":
         await send_letter(update, context)
-    elif query.data == "main_menu":
+    elif text == "🏠 В начало":
         await show_main_menu(update, context)
     else:
-        await query.answer("Неизвестная команда")
-
-
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle text messages."""
-    print("💬 text from", update.effective_user.id, ":", update.message.text)
-    await update.message.reply_text(
-        "Нажми кнопку ниже, чтобы получить букву 🇬🇷",
-        reply_markup=get_main_menu_keyboard()
-    )
+        # Unknown text - show menu
+        await update.message.reply_text(
+            "Нажми кнопку ниже, чтобы получить букву 🇬🇷",
+            reply_markup=get_reply_keyboard()
+        )
 
