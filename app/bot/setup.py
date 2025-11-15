@@ -5,7 +5,7 @@ import threading
 
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
-from app.bot.handlers import start, next_letter, handle_text
+from app.bot.handlers import start, handle_text
 from app.config import Config
 
 
@@ -20,7 +20,6 @@ def create_bot_application():
     """Create and configure Telegram bot application."""
     application = Application.builder().token(Config.TELEGRAM_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("next", next_letter))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     return application
 

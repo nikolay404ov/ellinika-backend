@@ -14,6 +14,14 @@ class Config:
     DB_USER = os.environ.get("DB_USER")
     DB_PASS = os.environ.get("DB_PASS")
     
+    # SQLAlchemy
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        """Get PostgreSQL database connection URL."""
+        return self.get_database_url()
+    
     @classmethod
     def validate(cls):
         """Validate required configuration."""
