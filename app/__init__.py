@@ -22,6 +22,10 @@ def create_app():
     # Import models after db is created
     from app import models  # noqa: F401
     
+    # Create tables if they don't exist
+    with app.app_context():
+        db.create_all()
+    
     # Register routes (import here to avoid circular import)
     from app.web.routes import register_routes
     register_routes(app)
