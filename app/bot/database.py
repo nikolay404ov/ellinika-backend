@@ -1,11 +1,11 @@
 """Database utilities for bot."""
 
-from app import db
 from app.models import Word
 
 
 def get_random_word():
     """Get a random word from database."""
+    from app import db
     return Word.query.order_by(db.func.random()).first()
 
 
@@ -21,6 +21,7 @@ def get_all_words():
 
 def add_word(greek_word, translation):
     """Add a new word to database."""
+    from app import db
     word = Word(greek_word=greek_word, translation=translation)
     db.session.add(word)
     db.session.commit()

@@ -2,7 +2,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
 from app.config import Config
-from app.web.routes import register_routes
 
 db = SQLAlchemy()
 
@@ -15,7 +14,11 @@ def create_app():
     # Initialize database
     db.init_app(app)
     
-    # Register routes
+    # Import models after db is created
+    from app import models  # noqa: F401
+    
+    # Register routes (import here to avoid circular import)
+    from app.web.routes import register_routes
     register_routes(app)
     
     return app
