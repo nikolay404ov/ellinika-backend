@@ -35,7 +35,7 @@ async def bot_main():
 
     await application.initialize()
     await application.start()
-    print("✅ Telegram bot initialized")
+    print("Telegram bot initialized")
 
     bot_ready_event.set()  # Signal that bot is ready to process updates
 
@@ -55,7 +55,7 @@ def ensure_loop_running():
 
         def runner():
             asyncio.set_event_loop(loop)
-            print("⚙️ Telegram async loop running...")
+            print("Telegram async loop running...")
             loop.run_until_complete(bot_main())
 
         threading.Thread(target=runner, daemon=True).start()

@@ -9,8 +9,8 @@ from app.bot.database import get_random_word
 def get_main_keyboard():
     """Create main menu keyboard."""
     keyboard = [
-        [KeyboardButton("📚 Карточки слов")],
-        [KeyboardButton("🏠 В начало")]
+        [KeyboardButton("Карточки слов")],
+        [KeyboardButton("В начало")]
     ]
     return ReplyKeyboardMarkup(
         keyboard,
@@ -23,8 +23,8 @@ def get_main_keyboard():
 def get_cards_keyboard():
     """Create keyboard for word cards."""
     keyboard = [
-        [KeyboardButton("🔄 Следующее слово"), KeyboardButton("👁 Показать перевод")],
-        [KeyboardButton("🏠 В начало")]
+        [KeyboardButton("Следующее слово"), KeyboardButton("Показать перевод")],
+        [KeyboardButton("В начало")]
     ]
     return ReplyKeyboardMarkup(
         keyboard,
@@ -37,7 +37,7 @@ def get_cards_keyboard():
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show main menu."""
     text = (
-        "Привет! 🇬🇷 Я помогу тебе выучить греческие слова.\n\n"
+        "Привет! Я помогу тебе выучить греческие слова.\n\n"
         "Нажми кнопку ниже, чтобы начать изучение!"
     )
     
@@ -49,7 +49,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command."""
-    print("▶️ /start from", update.effective_user.id)
+    print("/start from", update.effective_user.id)
     await show_main_menu(update, context)
 
 
@@ -62,26 +62,26 @@ async def show_word_card(update: Update, context: ContextTypes.DEFAULT_TYPE, sho
         
         if not word:
             await update.message.reply_text(
-                "📚 В базе данных пока нет слов. Добавьте слова для изучения!",
+                "В базе данных пока нет слов. Добавьте слова для изучения!",
                 reply_markup=get_main_keyboard()
             )
             return
         
         user_id = update.effective_user.id
-        print("📚 Word card shown to", user_id, "->", word.greek_word)
+        print("Word card shown to", user_id, "->", word.greek_word)
         
         if show_translation:
             text = (
-                f"📚 Греческое слово:\n"
-                f"🔤 {word.greek_word}\n\n"
-                f"💬 Перевод:\n"
-                f"📖 {word.translation}"
+                f"Греческое слово:\n"
+                f"{word.greek_word}\n\n"
+                f"Перевод:\n"
+                f"{word.translation}"
             )
         else:
             text = (
-                f"📚 Греческое слово:\n"
-                f"🔤 {word.greek_word}\n\n"
-                f"Нажми '👁 Показать перевод', чтобы увидеть перевод!"
+                f"Греческое слово:\n"
+                f"{word.greek_word}\n\n"
+                f"Нажми 'Показать перевод', чтобы увидеть перевод!"
             )
         
         # Store word ID in context for showing translation
@@ -97,13 +97,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle text messages and button presses."""
     text = update.message.text
     user_id = update.effective_user.id
-    print("💬 text from", user_id, ":", text)
+    print("text from", user_id, ":", text)
     
-    if text == "📚 Карточки слов":
+    if text == "Карточки слов":
         await show_word_card(update, context, show_translation=False)
-    elif text == "🔄 Следующее слово":
+    elif text == "Следующее слово":
         await show_word_card(update, context, show_translation=False)
-    elif text == "👁 Показать перевод":
+    elif text == "Показать перевод":
         # Get current word and show translation
         from app import app
         from app.bot.database import get_word_by_id
@@ -114,10 +114,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 word = get_word_by_id(word_id)
                 if word:
                     text = (
-                        f"📚 Греческое слово:\n"
-                        f"🔤 {word.greek_word}\n\n"
-                        f"💬 Перевод:\n"
-                        f"📖 {word.translation}"
+                        f"Греческое слово:\n"
+                        f"{word.greek_word}\n\n"
+                        f"Перевод:\n"
+                        f"{word.translation}"
                     )
                     await update.message.reply_text(
                         text=text,
@@ -127,12 +127,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await show_word_card(update, context, show_translation=False)
         else:
             await show_word_card(update, context, show_translation=False)
-    elif text == "🏠 В начало":
+    elif text == "В начало":
         await show_main_menu(update, context)
     else:
         # Unknown text - show menu
         await update.message.reply_text(
-            "Нажми кнопку ниже, чтобы начать изучение 🇬🇷",
+            "Нажми кнопку ниже, чтобы начать изучение",
             reply_markup=get_main_keyboard()
         )
 

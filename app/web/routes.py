@@ -24,7 +24,7 @@ def register_routes(app):
         ensure_loop_running()
 
         data = request.get_json(force=True)
-        print("📬 Update from Telegram:", data)
+        print("Update from Telegram:", data)
 
         update = Update.de_json(data, application.bot)
         loop = get_loop()
@@ -42,7 +42,7 @@ def register_routes(app):
         def _done(f: asyncio.Future):
             exc = f.exception()
             if exc:
-                print("❌ Error in process_update:", repr(exc))
+                print("Error in process_update:", repr(exc))
 
         future.add_done_callback(_done)
 
