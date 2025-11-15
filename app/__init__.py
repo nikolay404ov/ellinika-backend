@@ -11,6 +11,11 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
+    # Set database URI if available
+    db_url = Config.get_database_url()
+    if db_url:
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    
     # Initialize database
     db.init_app(app)
     
