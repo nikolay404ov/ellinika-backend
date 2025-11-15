@@ -94,16 +94,19 @@ async def show_word_card(update: Update, context: ContextTypes.DEFAULT_TYPE, sho
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle text messages and button presses."""
+    """Handle text messages and button presses. Only responds to button presses."""
     text = update.message.text
     user_id = update.effective_user.id
-    print("text from", user_id, ":", text)
     
+    # Only process button presses, ignore other text messages
     if text == "Карточки слов":
+        print("Button pressed:", text, "from", user_id)
         await show_word_card(update, context, show_translation=False)
     elif text == "Следующее слово":
+        print("Button pressed:", text, "from", user_id)
         await show_word_card(update, context, show_translation=False)
     elif text == "Показать перевод":
+        print("Button pressed:", text, "from", user_id)
         # Get current word and show translation
         from app import app
         from app.bot.database import get_word_by_id
@@ -128,11 +131,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await show_word_card(update, context, show_translation=False)
     elif text == "В начало":
+        print("Button pressed:", text, "from", user_id)
         await show_main_menu(update, context)
-    else:
-        # Unknown text - show menu
-        await update.message.reply_text(
-            "Нажми кнопку ниже, чтобы начать изучение",
-            reply_markup=get_main_keyboard()
-        )
+    # Ignore all other text messages - don't respond
 
